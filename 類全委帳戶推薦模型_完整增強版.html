@@ -1,0 +1,2481 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>類全委帳戶推薦模型 + 市場分析系統</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        /* 頁籤樣式 */
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            border: none;
+            background: transparent;
+            color: #6c757d;
+        }
+        
+        .tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+        
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            margin-bottom: -3px;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 40px;
+            animation: fadeIn 0.5s;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 原有評分系統樣式 */
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .file-upload-section {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .file-upload-section label {
+            display: block;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        .file-upload-section input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            font-size: 0.9em;
+        }
+        
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(56, 239, 125, 0.4);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+        
+        .weights {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 5px solid #2196F3;
+        }
+        
+        .weights h3 {
+            color: #1976d2;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .weight-item {
+            display: inline-block;
+            margin: 5px 15px 5px 0;
+            padding: 8px 15px;
+            background: white;
+            border-radius: 20px;
+            font-weight: 600;
+            color: #1976d2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-weight: 600;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .results-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .results-header h2 {
+            margin-bottom: 10px;
+        }
+        
+        .results-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        th {
+            font-weight: 600;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        tbody tr {
+            transition: background 0.3s ease;
+        }
+        
+        tbody tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .rank-badge {
+            display: inline-block;
+            width: 35px;
+            height: 35px;
+            line-height: 35px;
+            text-align: center;
+            border-radius: 50%;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .rank-1 {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.5);
+        }
+        
+        .rank-2 {
+            background: linear-gradient(135deg, #C0C0C0, #808080);
+            box-shadow: 0 2px 8px rgba(192, 192, 192, 0.5);
+        }
+        
+        .rank-3 {
+            background: linear-gradient(135deg, #CD7F32, #8B4513);
+            box-shadow: 0 2px 8px rgba(205, 127, 50, 0.5);
+        }
+        
+        .rank-other {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+        
+        .excluded-row {
+            opacity: 0.6;
+            background: #fff3cd !important;
+        }
+        
+        .excluded-badge {
+            background: #ffc107;
+            color: #856404;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .score-cell {
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        /* 市場分析頁面樣式 */
+        .market-analysis-container {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .analysis-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .analysis-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .input-area {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+        }
+        
+        .input-area:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .file-list {
+            list-style: none;
+            margin-top: 15px;
+        }
+        
+        .file-list li {
+            background: white;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .file-list .file-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .file-list .file-size {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .report-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        
+        .report-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .report-header h2 {
+            color: #2c3e50;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .report-date {
+            color: #6c757d;
+            font-size: 1em;
+        }
+        
+        .report-section {
+            margin-bottom: 30px;
+        }
+        
+        .report-section h3 {
+            color: #667eea;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            padding-left: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .report-content {
+            line-height: 1.8;
+            color: #2c3e50;
+            text-align: justify;
+        }
+        
+        .report-list {
+            list-style: none;
+            padding-left: 20px;
+        }
+        
+        .report-list li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 25px;
+        }
+        
+        .report-list li:before {
+            content: "▶";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-size: 0.8em;
+        }
+        
+        .chart-container {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .chart-title {
+            text-align: center;
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        canvas {
+            max-width: 100%;
+            height: auto !important;
+        }
+        
+        .data-table {
+            width: 100%;
+            margin: 20px 0;
+            border-collapse: collapse;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        .data-table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .data-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .positive {
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .negative {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+            }
+            .header, .tabs, .action-buttons {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .tab {
+                padding: 15px 10px;
+                font-size: 0.9em;
+            }
+            
+            .tab-content {
+                padding: 20px;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+            
+            table {
+                font-size: 0.85em;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+            }
+        }
+    </style>
+    <!-- 引入必要的函式庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏆 類全委帳戶推薦模型 + 市場分析系統</h1>
+            <div class="subtitle">Discretionary Account Recommendation & Market Analysis System</div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('scoring')">📊 帳戶評分系統</button>
+            <button class="tab" onclick="switchTab('market')">📈 市場分析報告</button>
+        </div>
+        
+        <!-- 帳戶評分系統頁籤 -->
+        <div id="scoring-tab" class="tab-content active">
+            <div class="controls">
+                <div class="file-upload-section">
+                    <label for="accountFile">類全委帳戶資訊 Excel:</label>
+                    <input type="file" id="accountFile" accept=".xlsx,.xls">
+                </div>
+                <div class="file-upload-section">
+                    <label for="strategyFile">投資策略部 Excel:</label>
+                    <input type="file" id="strategyFile" accept=".xlsx,.xls">
+                </div>
+                <button class="btn-primary" onclick="processUploadedFiles()">處理上傳的檔案並重新計算</button>
+                <button class="btn-success" onclick="exportToExcel()">匯出 Excel 報告</button>
+            </div>
+            
+            <div id="statusMessage" class="status-message"></div>
+            
+            <div class="weights">
+                <h3>📊 評分配置</h3>
+                <div>
+                    <span class="weight-item">績效 45%</span>
+                    <span class="weight-item">市場配置 15%</span>
+                    <span class="weight-item">產業配置 15%</span>
+                    <span class="weight-item">股債配置 15%</span>
+                    <span class="weight-item">波動度 10%</span>
+                    <span class="weight-item">加碼撥回加分 0.05</span>
+                </div>
+            </div>
+            
+            <div class="results-header">
+                <h2>🏆 評分結果</h2>
+                <div class="results-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">總帳戶數</div>
+                        <div class="stat-value" id="totalAccounts">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">符合規模帳戶</div>
+                        <div class="stat-value" id="qualifiedAccounts">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">排除帳戶</div>
+                        <div class="stat-value" id="excludedAccounts">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="results"></div>
+        </div>
+        
+        <!-- 市場分析報告頁籤 -->
+        <div id="market-tab" class="tab-content">
+            <div class="market-analysis-container">
+                <div class="analysis-section">
+                    <h3>📝 市場資訊輸入</h3>
+                    <p style="margin-bottom: 15px; color: #6c757d;">請貼上或輸入最新的市場資訊（支援全球股市、美股、台股、債券、黃金等）</p>
+                    <textarea id="marketInfoInput" class="input-area" placeholder="範例：
+美股：S&P 500指數收盤於4,783點，上漲0.8%...
+台股：加權指數收盤於17,830點，科技股表現強勁...
+債券：美國10年期公債殖利率為4.2%...
+黃金：現貨黃金每盎司2,050美元...
+
+您可以從各大財經網站（如：Bloomberg、Reuters、Yahoo Finance、鉅亨網等）複製相關市場資訊貼上。"></textarea>
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>📁 上傳市場展望報告</h3>
+                    <p style="margin-bottom: 15px; color: #6c757d;">支援上傳文字檔案（.txt, .md）或直接貼上報告內容</p>
+                    <input type="file" id="marketReports" accept=".txt,.md,.pdf" multiple style="margin-bottom: 15px;">
+                    <ul id="fileList" class="file-list"></ul>
+                    <textarea id="reportInput" class="input-area" placeholder="或直接貼上市場展望報告內容..."></textarea>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn-primary" onclick="generateMarketReport()">🔍 生成市場分析報告</button>
+                    <button class="btn-success" onclick="exportReportToPDF()">📄 匯出 PDF 報告</button>
+                    <button class="btn-warning" onclick="clearMarketData()">🔄 清除資料</button>
+                </div>
+                
+                <div id="marketStatusMessage" class="status-message"></div>
+            </div>
+            
+            <div id="reportOutput" style="display: none;">
+                <div class="report-container" id="reportContent">
+                    <!-- 報告內容將動態生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 資料區 ====================
+        const DATA = {
+  "accounts": [
+    {
+      "code": "FF012",
+      "insurance_company": "台新人壽",
+      "fund_company": "復華投信",
+      "name": "趨勢雙盈",
+      "scale": 3090772757.4179964,
+      "stock_allocation": 68.47000000000001,
+      "bond_allocation": 29.17,
+      "volatility": 0.11658099999999999,
+      "drawdown_rate": 0.0625,
+      "perf_3m": 10.6353,
+      "perf_6m": 24.1494,
+      "perf_1y": 10.0333,
+      "perf_2y": null,
+      "perf_since": 12.4147,
+      "markets": {
+        "美國": 0.4193,
+        "歐洲": 0.044000000000000004,
+        "日本": 0.0232,
+        "中國": 0.020099999999999996,
+        "台灣": 0.32899999999999996,
+        "印度": 0.0030000000000000005,
+        "韓國": 0.006999999999999999,
+        "東南亞": 0.0111,
+        "巴西": 0.0046,
+        "墨西哥": 0.0092,
+        "新興歐": 0.011000000000000001
+      },
+      "industries": {
+        "非核心消費": 0.0454,
+        "核心消費": 0.0154,
+        "醫療保健": 0.022099999999999998,
+        "資訊技術": 0.3835,
+        "通訊服務": 0.0373,
+        "公用事業": 0.0063,
+        "房地產": 0.0012,
+        "金融": 0.0684,
+        "工業": 0.0641,
+        "能源": 0.009899999999999999,
+        "原材料": 0.011200000000000002
+      }
+    },
+    {
+      "code": "FF010",
+      "insurance_company": "台新人壽",
+      "fund_company": "台新投信",
+      "name": "多重時機",
+      "scale": 8185237228.639097,
+      "stock_allocation": 54.43,
+      "bond_allocation": 39.839999999999996,
+      "volatility": 0.10157,
+      "drawdown_rate": 0.96,
+      "perf_3m": 3.2785,
+      "perf_6m": 8.4711,
+      "perf_1y": 8.145,
+      "perf_2y": 26.7465,
+      "perf_since": 33.8822,
+      "markets": {
+        "美國": 0.6057,
+        "歐洲": 0.0642,
+        "日本": 0.0015,
+        "中國": 0.0011,
+        "台灣": 0.0037,
+        "印度": 0.0019,
+        "韓國": 0.0014,
+        "東南亞": 0.008,
+        "巴西": 0.0019,
+        "墨西哥": 0.0083,
+        "新興歐": 0.0101
+      },
+      "industries": {
+        "非核心消費": 0.0481,
+        "核心消費": 0.0532,
+        "醫療保健": 0.0,
+        "資訊技術": 0.2399,
+        "通訊服務": 0.1533,
+        "公用事業": 0.0376,
+        "房地產": 0.0,
+        "金融": 0.0846,
+        "工業": 0.0276,
+        "能源": 0.0282,
+        "原材料": 0.0103
+      }
+    },
+    {
+      "code": "FF007",
+      "insurance_company": "台新人壽",
+      "fund_company": "台新投信",
+      "name": "全新勢力",
+      "scale": 3318325181.198987,
+      "stock_allocation": 63.839999999999996,
+      "bond_allocation": 32.28,
+      "volatility": 0.122249,
+      "drawdown_rate": 0.52,
+      "perf_3m": 3.4371,
+      "perf_6m": 8.9165,
+      "perf_1y": 8.7632,
+      "perf_2y": 28.8725,
+      "perf_since": 29.321,
+      "markets": {
+        "美國": 0.6373,
+        "歐洲": 0.0522,
+        "日本": 0.0049,
+        "中國": 0.0045,
+        "台灣": 0.0048,
+        "印度": 0.0022,
+        "韓國": 0.0016,
+        "東南亞": 0.0102,
+        "巴西": 0.0035,
+        "墨西哥": 0.008,
+        "新興歐": 0.0098
+      },
+      "industries": {
+        "非核心消費": 0.0413,
+        "核心消費": 0.0444,
+        "醫療保健": 0.0,
+        "資訊技術": 0.2867,
+        "通訊服務": 0.1648,
+        "公用事業": 0.045,
+        "房地產": 0.0,
+        "金融": 0.0706,
+        "工業": 0.0246,
+        "能源": 0.0223,
+        "原材料": 0.0086
+      }
+    },
+    {
+      "code": "FF009",
+      "insurance_company": "台新人壽",
+      "fund_company": "宏利投信",
+      "name": "勝利雙享",
+      "scale": 1580892038.2792618,
+      "stock_allocation": 70.24000000000001,
+      "bond_allocation": 28.000000000000004,
+      "volatility": 0.118582,
+      "drawdown_rate": 0.4815,
+      "perf_3m": 4.397,
+      "perf_6m": 10.2148,
+      "perf_1y": 7.1749,
+      "perf_2y": 22.6515,
+      "perf_since": 22.6871,
+      "markets": {
+        "美國": 0.8929,
+        "歐洲": 0.0424,
+        "日本": 0.0029,
+        "中國": 0.0057,
+        "台灣": 0.007,
+        "印度": 0.0,
+        "韓國": 0.005,
+        "東南亞": 0.0017,
+        "巴西": 0.003,
+        "墨西哥": 0.0041,
+        "新興歐": 0.0027
+      },
+      "industries": {
+        "非核心消費": 0.047,
+        "核心消費": 0.0098,
+        "醫療保健": 0.0173,
+        "資訊技術": 0.2833,
+        "通訊服務": 0.0693,
+        "公用事業": 0.0643,
+        "房地產": 0.0137,
+        "金融": 0.0109,
+        "工業": 0.0691,
+        "能源": 0.0346,
+        "原材料": 0.0033
+      }
+    },
+    {
+      "code": "FF008",
+      "insurance_company": "台新人壽",
+      "fund_company": "台新投信",
+      "name": "趨動台灣",
+      "scale": 2577541567.696296,
+      "stock_allocation": 87.09,
+      "bond_allocation": 0.0,
+      "volatility": 0.20977,
+      "drawdown_rate": 0.85,
+      "perf_3m": 11.9592,
+      "perf_6m": 35.6578,
+      "perf_1y": 22.1769,
+      "perf_2y": 53.5388,
+      "perf_since": 59.2925,
+      "markets": {
+        "美國": 0.0,
+        "歐洲": 0.0,
+        "日本": 0.0,
+        "中國": 0.0,
+        "台灣": 0.8709,
+        "印度": 0.0,
+        "韓國": 0.0,
+        "東南亞": 0.0,
+        "巴西": 0.0,
+        "墨西哥": 0.0,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.0202,
+        "核心消費": 0.0188,
+        "醫療保健": 0.0,
+        "資訊技術": 0.4066,
+        "通訊服務": 0.0334,
+        "公用事業": 0.0,
+        "房地產": 0.0,
+        "金融": 0.0121,
+        "工業": 0.2327,
+        "能源": 0.0008,
+        "原材料": 0.0118
+      }
+    },
+    {
+      "code": "FF014",
+      "insurance_company": "台新人壽",
+      "fund_company": "台新投信",
+      "name": "美國穩盈",
+      "scale": 4931707124.58054,
+      "stock_allocation": 59.89,
+      "bond_allocation": 34.449999999999996,
+      "volatility": 0.0,
+      "drawdown_rate": 0.67,
+      "perf_3m": 2.7516,
+      "perf_6m": 3.6842,
+      "perf_1y": null,
+      "perf_2y": null,
+      "perf_since": 3.6842,
+      "markets": {
+        "美國": 0.6303,
+        "歐洲": 0.0821,
+        "日本": 0.002,
+        "中國": 0.0012,
+        "台灣": 0.0041,
+        "印度": 0.0018,
+        "韓國": 0.0018,
+        "東南亞": 0.0071,
+        "巴西": 0.0023,
+        "墨西哥": 0.0078,
+        "新興歐": 0.0089
+      },
+      "industries": {
+        "非核心消費": 0.0555,
+        "核心消費": 0.0586,
+        "醫療保健": 0.0,
+        "資訊技術": 0.2462,
+        "通訊服務": 0.1584,
+        "公用事業": 0.0591,
+        "房地產": 0.0,
+        "金融": 0.0757,
+        "工業": 0.0495,
+        "能源": 0.031,
+        "原材料": 0.0108
+      }
+    },
+    {
+      "code": "DMA124",
+      "insurance_company": "法巴人壽",
+      "fund_company": "安聯投信",
+      "name": "好勢承雙",
+      "scale": 1473788184.2089982,
+      "stock_allocation": 0.0,
+      "bond_allocation": 0.0,
+      "volatility": 0.0,
+      "drawdown_rate": 0.0,
+      "perf_3m": null,
+      "perf_6m": null,
+      "perf_1y": null,
+      "perf_2y": null,
+      "perf_since": 1.1,
+      "markets": {
+        "美國": 0.0,
+        "歐洲": 0.0,
+        "日本": 0.0,
+        "中國": 0.0,
+        "台灣": 0.0,
+        "印度": 0.0,
+        "韓國": 0.0,
+        "東南亞": 0.0,
+        "巴西": 0.0,
+        "墨西哥": 0.0,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.0,
+        "核心消費": 0.0,
+        "醫療保健": 0.0,
+        "資訊技術": 0.0,
+        "通訊服務": 0.0,
+        "公用事業": 0.0,
+        "房地產": 0.0,
+        "金融": 0.0,
+        "工業": 0.0,
+        "能源": 0.0,
+        "原材料": 0.0
+      }
+    },
+    {
+      "code": "DMA071",
+      "insurance_company": "法巴人壽",
+      "fund_company": "貝萊投信",
+      "name": "環球得利",
+      "scale": 7161316100.404261,
+      "stock_allocation": 62.2,
+      "bond_allocation": 37.2,
+      "volatility": 0.086282,
+      "drawdown_rate": 0.09523809523809523,
+      "perf_3m": 3.7212,
+      "perf_6m": 9.1313,
+      "perf_1y": 9.7509,
+      "perf_2y": 27.8127,
+      "perf_since": 38.5642,
+      "markets": {
+        "美國": 0.724,
+        "歐洲": 0.045,
+        "日本": 0.0239,
+        "中國": 0.0238,
+        "台灣": 0.0264,
+        "印度": 0.0229,
+        "韓國": 0.0175,
+        "東南亞": 0.02,
+        "巴西": 0.0095,
+        "墨西哥": 0.0074,
+        "新興歐": 0.01
+      },
+      "industries": {
+        "非核心消費": 0.0705,
+        "核心消費": 0.0261,
+        "醫療保健": 0.0421,
+        "資訊技術": 0.2303,
+        "通訊服務": 0.071,
+        "公用事業": 0.0183,
+        "房地產": 0.0119,
+        "金融": 0.12,
+        "工業": 0.0641,
+        "能源": 0.0246,
+        "原材料": 0.0276
+      }
+    },
+    {
+      "code": "DMA085",
+      "insurance_company": "法巴人壽",
+      "fund_company": "霸菱投顧",
+      "name": "永續佳利",
+      "scale": 1631818461.212072,
+      "stock_allocation": 50.5,
+      "bond_allocation": 44.0,
+      "volatility": 0.085159,
+      "drawdown_rate": 0.0,
+      "perf_3m": 3.0555,
+      "perf_6m": 7.6557,
+      "perf_1y": 4.9109,
+      "perf_2y": 21.0326,
+      "perf_since": 3.1339,
+      "markets": {
+        "美國": 0.575,
+        "歐洲": 0.14,
+        "日本": 0.046,
+        "中國": 0.028,
+        "台灣": 0.009,
+        "印度": 0.007,
+        "韓國": 0.008,
+        "東南亞": 0.004,
+        "巴西": 0.004,
+        "墨西哥": 0.006,
+        "新興歐": 0.014
+      },
+      "industries": {
+        "非核心消費": 0.069,
+        "核心消費": 0.021,
+        "醫療保健": 0.037,
+        "資訊技術": 0.175,
+        "通訊服務": 0.046,
+        "公用事業": 0.022,
+        "房地產": 0.007,
+        "金融": 0.069,
+        "工業": 0.052,
+        "能源": 0.012,
+        "原材料": 0.017
+      }
+    },
+    {
+      "code": "DMA103",
+      "insurance_company": "法巴人壽",
+      "fund_company": "台新投信",
+      "name": "前瞻風控",
+      "scale": 1004154795.8399775,
+      "stock_allocation": 46.239999999999995,
+      "bond_allocation": 49.63,
+      "volatility": 0.090847,
+      "drawdown_rate": 0.0,
+      "perf_3m": 2.5499,
+      "perf_6m": 7.5787,
+      "perf_1y": 7.528,
+      "perf_2y": 23.2009,
+      "perf_since": 22.511,
+      "markets": {
+        "美國": 0.45896861552215995,
+        "歐洲": 0.17261605701006003,
+        "日本": 0.02860044545039999,
+        "中國": 0.012310734701799999,
+        "台灣": 0.011026903731000001,
+        "印度": 0.008705013754,
+        "韓國": 0.0092568946555,
+        "東南亞": 0.010310811271000002,
+        "巴西": 0.003513916636999999,
+        "墨西哥": 0.0088057642343,
+        "新興歐": 0.010497030039200002
+      },
+      "industries": {
+        "非核心消費": 0.04529027647712001,
+        "核心消費": 0.055706868095879984,
+        "醫療保健": 0.0,
+        "資訊技術": 0.05150767565722,
+        "通訊服務": 0.039756032646160004,
+        "公用事業": 0.025586975935320003,
+        "房地產": 0.0,
+        "金融": 0.17836018826741998,
+        "工業": 0.03642346420198,
+        "能源": 0.03599522510282,
+        "原材料": 0.014281079584239999
+      }
+    },
+    {
+      "code": "DMA077",
+      "insurance_company": "法巴人壽",
+      "fund_company": "台新投信",
+      "name": "美歐價值",
+      "scale": 586288850.0763576,
+      "stock_allocation": 69.12,
+      "bond_allocation": 27.08,
+      "volatility": 0.096721,
+      "drawdown_rate": 0.0,
+      "perf_3m": 1.0427,
+      "perf_6m": 4.1527,
+      "perf_1y": 4.3922,
+      "perf_2y": 19.9721,
+      "perf_since": 17.7055,
+      "markets": {
+        "美國": 0.773,
+        "歐洲": 0.189,
+        "日本": 0.0,
+        "中國": 0.0,
+        "台灣": 0.0,
+        "印度": 0.0,
+        "韓國": 0.0,
+        "東南亞": 0.0,
+        "巴西": 0.0,
+        "墨西哥": 0.0,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.062697068768,
+        "核心消費": 0.224011420492,
+        "醫療保健": 0.0,
+        "資訊技術": 0.024837156341999997,
+        "通訊服務": 0.159311460616,
+        "公用事業": 0.011400065261999999,
+        "房地產": 0.1261,
+        "金融": 0.07441068095999999,
+        "工業": 0.016649774171999997,
+        "能源": 0.067412576112,
+        "原材料": 0.17288549341
+      }
+    },
+    {
+      "code": "DMA052",
+      "insurance_company": "法巴人壽",
+      "fund_company": "復華投信",
+      "name": "台灣新益",
+      "scale": 819999515.0930997,
+      "stock_allocation": 48.835,
+      "bond_allocation": 26.625000000000004,
+      "volatility": 0.104648,
+      "drawdown_rate": 0.0,
+      "perf_3m": 11.6544,
+      "perf_6m": 30.0089,
+      "perf_1y": 29.6336,
+      "perf_2y": 52.9905,
+      "perf_since": 108.0495,
+      "markets": {
+        "美國": 0.1505,
+        "歐洲": 0.019799999999999998,
+        "日本": 0.0027,
+        "中國": 0.0002,
+        "台灣": 0.5183,
+        "印度": 0.0,
+        "韓國": 0.0006,
+        "東南亞": 0.0001,
+        "巴西": 0.0,
+        "墨西哥": 0.0,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.0199,
+        "核心消費": 0.005600000000000001,
+        "醫療保健": 0.0026,
+        "資訊技術": 0.37810000000000005,
+        "通訊服務": 0.0070999999999999995,
+        "公用事業": 0.0001,
+        "房地產": 0.0006,
+        "金融": 0.0401,
+        "工業": 0.052300000000000006,
+        "能源": 0.0007000000000000001,
+        "原材料": 0.0084
+      }
+    },
+    {
+      "code": "DMA056",
+      "insurance_company": "法巴人壽",
+      "fund_company": "聯博投信",
+      "name": "環球新益",
+      "scale": 357076984.75970006,
+      "stock_allocation": 85.49,
+      "bond_allocation": 12.24,
+      "volatility": 0.071191,
+      "drawdown_rate": 0.0,
+      "perf_3m": 5.1077,
+      "perf_6m": 12.3953,
+      "perf_1y": 9.5553,
+      "perf_2y": 28.4642,
+      "perf_since": 35.811,
+      "markets": {
+        "美國": 0.3419,
+        "歐洲": 0.1314,
+        "日本": 0.0296,
+        "中國": 0.008,
+        "台灣": 0.0,
+        "印度": 0.0,
+        "韓國": 0.0,
+        "東南亞": 0.0,
+        "巴西": 0.0,
+        "墨西哥": 0.0,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.11346044061922357,
+        "核心消費": 0.05040104867631437,
+        "醫療保健": 0.08138624469296954,
+        "資訊技術": 0.28773486646114926,
+        "通訊服務": 0.09994288747329026,
+        "公用事業": 0.014054974155062013,
+        "房地產": 0.016566910868622366,
+        "金融": 0.13819776557482372,
+        "工業": 0.14482896178618823,
+        "能源": 0.025025783154439606,
+        "原材料": 0.028400116537916926
+      }
+    },
+    {
+      "code": "DMA073",
+      "insurance_company": "法巴人壽",
+      "fund_company": "柏瑞投信",
+      "name": "特別優利",
+      "scale": 274160146.7875015,
+      "stock_allocation": 20.4,
+      "bond_allocation": 49.63,
+      "volatility": 0.047073000000000004,
+      "drawdown_rate": 0.0,
+      "perf_3m": 2.2003,
+      "perf_6m": 5.5319,
+      "perf_1y": 4.6036,
+      "perf_2y": 15.4476,
+      "perf_since": 15.1849,
+      "markets": {
+        "美國": 0.4413,
+        "歐洲": 0.1911,
+        "日本": 0.0232,
+        "中國": 0.0077,
+        "台灣": 0.0231,
+        "印度": 0.0088,
+        "韓國": 0.0068,
+        "東南亞": 0.0039,
+        "巴西": 0.0011,
+        "墨西哥": 0.0033,
+        "新興歐": 0.007
+      },
+      "industries": {
+        "非核心消費": 0.0312,
+        "核心消費": 0.0111,
+        "醫療保健": 0.0205,
+        "資訊技術": 0.1295,
+        "通訊服務": 0.0311,
+        "公用事業": 0.0062,
+        "房地產": 0.0076,
+        "金融": 0.0504,
+        "工業": 0.0456,
+        "能源": 0.0054,
+        "原材料": 0.0059
+      }
+    },
+    {
+      "code": "DMA015",
+      "insurance_company": "法巴人壽",
+      "fund_company": "聯博投信",
+      "name": "環球穩健",
+      "scale": 307510193.3422454,
+      "stock_allocation": 47.72,
+      "bond_allocation": 50.019999999999996,
+      "volatility": 0.05640799999999999,
+      "drawdown_rate": 0.0,
+      "perf_3m": 1.8729,
+      "perf_6m": 4.7517,
+      "perf_1y": 5.8305,
+      "perf_2y": 15.9556,
+      "perf_since": 22.385,
+      "markets": {
+        "美國": 0.3619,
+        "歐洲": 0.1223,
+        "日本": 0.0,
+        "中國": 0.0,
+        "台灣": 0.0,
+        "印度": 0.0,
+        "韓國": 0.0,
+        "東南亞": 0.0,
+        "巴西": 0.0,
+        "墨西哥": 0.0,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.09791943157589002,
+        "核心消費": 0.04058989330335271,
+        "醫療保健": 0.10094005863566571,
+        "資訊技術": 0.26984446382899446,
+        "通訊服務": 0.10754851450054198,
+        "公用事業": 0.01766944904609259,
+        "房地產": 0.011747315059862816,
+        "金融": 0.17900695201811706,
+        "工業": 0.12226218148723514,
+        "能源": 0.030880054362146126,
+        "原材料": 0.021591686182101406
+      }
+    },
+    {
+      "code": "DMA047",
+      "insurance_company": "法巴人壽",
+      "fund_company": "富達投信",
+      "name": "趨勢創新",
+      "scale": 150844565.3051882,
+      "stock_allocation": 88.48,
+      "bond_allocation": 10.97,
+      "volatility": 0.108392,
+      "drawdown_rate": 0.0625,
+      "perf_3m": 6.4409,
+      "perf_6m": 13.4707,
+      "perf_1y": 13.2802,
+      "perf_2y": 33.1689,
+      "perf_since": 69.94,
+      "markets": {
+        "美國": 0.5453,
+        "歐洲": 0.0897,
+        "日本": 0.0,
+        "中國": 0.0738,
+        "台灣": 0.0,
+        "印度": 0.0,
+        "韓國": 0.0,
+        "東南亞": 0.0,
+        "巴西": 0.0,
+        "墨西哥": 0.0,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.0,
+        "核心消費": 0.0,
+        "醫療保健": 0.0857,
+        "資訊技術": 0.2297,
+        "通訊服務": 0.0,
+        "公用事業": 0.0,
+        "房地產": 0.0,
+        "金融": 0.0,
+        "工業": 0.0189,
+        "能源": 0.0,
+        "原材料": 0.0
+      }
+    },
+    {
+      "code": "DMA066",
+      "insurance_company": "法巴人壽",
+      "fund_company": "台新投信",
+      "name": "智動因子",
+      "scale": 126229902.67403537,
+      "stock_allocation": 58.69259999999999,
+      "bond_allocation": 33.2564,
+      "volatility": 0.096909,
+      "drawdown_rate": 0.0,
+      "perf_3m": 3.1439,
+      "perf_6m": 7.5469,
+      "perf_1y": 8.7713,
+      "perf_2y": 23.7142,
+      "perf_since": 20.889,
+      "markets": {
+        "美國": 0.7042546163154201,
+        "歐洲": 0.16419566826708004,
+        "日本": 0.009787136541120001,
+        "中國": 0.0024149609143800004,
+        "台灣": 0.00182299392429,
+        "印度": 0.00170158998905,
+        "韓國": 0.00119165158371,
+        "東南亞": 0.00224307290691,
+        "巴西": 0.00041733195525000004,
+        "墨西哥": 0.00051158724211,
+        "新興歐": 0.00029612037587999995
+      },
+      "industries": {
+        "非核心消費": 0.06586211177581,
+        "核心消費": 0.13343876057446,
+        "醫療保健": 0.0,
+        "資訊技術": 0.16571350285979,
+        "通訊服務": 0.10283580929626,
+        "公用事業": 0.03387027078213,
+        "房地產": 0.0,
+        "金融": 0.17773873444053,
+        "工業": 0.07734412583274002,
+        "能源": 0.03793342164808,
+        "原材料": 0.017037939518709997
+      }
+    },
+    {
+      "code": "DMA083",
+      "insurance_company": "法巴人壽",
+      "fund_company": "台新投信",
+      "name": "台灣金贊",
+      "scale": 356346267.7761001,
+      "stock_allocation": 92.42999999999999,
+      "bond_allocation": 0.0,
+      "volatility": 0.21681,
+      "drawdown_rate": 0.0,
+      "perf_3m": 11.3693,
+      "perf_6m": 36.4343,
+      "perf_1y": 22.3802,
+      "perf_2y": 64.8257,
+      "perf_since": 56.3815,
+      "markets": {
+        "美國": 0.0,
+        "歐洲": 0.0,
+        "日本": 0.0,
+        "中國": 0.0,
+        "台灣": 0.9242999999999999,
+        "印度": 0.0,
+        "韓國": 0.0,
+        "東南亞": 0.0,
+        "巴西": 0.0,
+        "墨西哥": 0.0,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.009697193718000001,
+        "核心消費": 0.027534157752999996,
+        "醫療保健": 0.0,
+        "資訊技術": 0.41729371448999997,
+        "通訊服務": 0.046717274397000005,
+        "公用事業": 0.0,
+        "房地產": 0.0,
+        "金融": 0.01573226961,
+        "工業": 0.212093372093,
+        "能源": 0.000129147123,
+        "原材料": 0.015339961571999999
+      }
+    },
+    {
+      "code": "DMA120",
+      "insurance_company": "法巴人壽",
+      "fund_company": "台新投信",
+      "name": "科技智選",
+      "scale": 605001497.1142902,
+      "stock_allocation": 65.33,
+      "bond_allocation": 26.8,
+      "volatility": 0.117389,
+      "drawdown_rate": 0.0,
+      "perf_3m": 3.5374,
+      "perf_6m": 8.5103,
+      "perf_1y": 6.0348,
+      "perf_2y": null,
+      "perf_since": 9.624,
+      "markets": {
+        "美國": 0.7836678557269999,
+        "歐洲": 0.02962924605699999,
+        "日本": 0.00187855226,
+        "中國": 0.001795683349,
+        "台灣": 0.0047174063920000005,
+        "印度": 0.0007927679580000001,
+        "韓國": 0.000497381843,
+        "東南亞": 0.0033993233970000002,
+        "巴西": 0.0009794826280000001,
+        "墨西哥": 0.0029483631090000003,
+        "新興歐": 0.0022093772630000005
+      },
+      "industries": {
+        "非核心消費": 0.04957203767400001,
+        "核心消費": 0.079582851919,
+        "醫療保健": 0.0,
+        "資訊技術": 0.24027116225099998,
+        "通訊服務": 0.159054436292,
+        "公用事業": 0.022943319269000003,
+        "房地產": 0.0,
+        "金融": 0.09115801188000003,
+        "工業": 0.037784318564999995,
+        "能源": 0.025156405607000002,
+        "原材料": 0.007209140998
+      }
+    },
+    {
+      "code": "DMA023",
+      "insurance_company": "法巴人壽",
+      "fund_company": "富達投信",
+      "name": "金采收益",
+      "scale": 233514703.6196692,
+      "stock_allocation": 66.67,
+      "bond_allocation": 30.099999999999998,
+      "volatility": 0.086399,
+      "drawdown_rate": 0.0,
+      "perf_3m": 3.2727,
+      "perf_6m": 8.4491,
+      "perf_1y": 8.5581,
+      "perf_2y": 24.449,
+      "perf_since": 26.7543,
+      "markets": {
+        "美國": 0.2906,
+        "歐洲": 0.0864,
+        "日本": 0.0537,
+        "中國": 0.0303,
+        "台灣": 0.0,
+        "印度": 0.0336,
+        "韓國": 0.02,
+        "東南亞": 0.0,
+        "巴西": 0.0155,
+        "墨西哥": 0.0,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.0,
+        "核心消費": 0.0,
+        "醫療保健": 0.0,
+        "資訊技術": 0.0259,
+        "通訊服務": 0.0,
+        "公用事業": 0.0,
+        "房地產": 0.0,
+        "金融": 0.0469,
+        "工業": 0.0157,
+        "能源": 0.0201,
+        "原材料": 0.0
+      }
+    },
+    {
+      "code": "FFUPC018",
+      "insurance_company": "安達人壽",
+      "fund_company": "瀚亞投信",
+      "name": "年年守成",
+      "scale": 585148077.5785094,
+      "stock_allocation": 49.14,
+      "bond_allocation": 47.63,
+      "volatility": 0.091205,
+      "drawdown_rate": 0.0,
+      "perf_3m": 3.358,
+      "perf_6m": 7.5215,
+      "perf_1y": 6.1743,
+      "perf_2y": 20.8307,
+      "perf_since": 13.976,
+      "markets": {
+        "美國": 0.3102,
+        "歐洲": 0.0735,
+        "日本": 0.0289,
+        "中國": 0.0152,
+        "台灣": 0.0154,
+        "印度": 0.01,
+        "韓國": 0.0082,
+        "東南亞": 0.0049,
+        "巴西": 0.0027,
+        "墨西哥": 0.0012,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.0919,
+        "核心消費": 0.0427,
+        "醫療保健": 0.0751,
+        "資訊技術": 0.3274,
+        "通訊服務": 0.0843,
+        "公用事業": 0.035,
+        "房地產": 0.0176,
+        "金融": 0.1554,
+        "工業": 0.112,
+        "能源": 0.026,
+        "原材料": 0.0298
+      }
+    },
+    {
+      "code": "FFUTS023",
+      "insurance_company": "安達人壽",
+      "fund_company": "台新投信",
+      "name": "美歐戰略",
+      "scale": 437928246.252672,
+      "stock_allocation": 95.78999999999999,
+      "bond_allocation": 0.0,
+      "volatility": 0.140684,
+      "drawdown_rate": 0.0,
+      "perf_3m": 1.6844,
+      "perf_6m": 4.8611,
+      "perf_1y": 5.7826,
+      "perf_2y": 11.8025,
+      "perf_since": 11.8025,
+      "markets": {
+        "美國": 0.7035,
+        "歐洲": 0.2544,
+        "日本": 0.0,
+        "中國": 0.0,
+        "台灣": 0.0,
+        "印度": 0.0,
+        "韓國": 0.0,
+        "東南亞": 0.0,
+        "巴西": 0.0,
+        "墨西哥": 0.0,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.0626,
+        "核心消費": 0.2393,
+        "醫療保健": 0.1733,
+        "資訊技術": 0.0,
+        "通訊服務": 0.1758,
+        "公用事業": 0.0,
+        "房地產": 0.1786,
+        "金融": 0.0,
+        "工業": 0.0,
+        "能源": 0.065,
+        "原材料": 0.0633
+      }
+    },
+    {
+      "code": "FFUPM014",
+      "insurance_company": "安達人壽",
+      "fund_company": "統一投信",
+      "name": "致富未來",
+      "scale": 308421867.2568917,
+      "stock_allocation": 75.76,
+      "bond_allocation": 12.7,
+      "volatility": 0.14055199999999998,
+      "drawdown_rate": 0.0,
+      "perf_3m": 5.4799,
+      "perf_6m": 12.0563,
+      "perf_1y": 6.8933,
+      "perf_2y": 31.0754,
+      "perf_since": 1.6874,
+      "markets": {
+        "美國": 0.6963,
+        "歐洲": 0.0,
+        "日本": 0.0,
+        "中國": 0.015,
+        "台灣": 0.0,
+        "印度": 0.0,
+        "韓國": 0.0,
+        "東南亞": 0.0,
+        "巴西": 0.0,
+        "墨西哥": 0.0,
+        "新興歐": 0.0
+      },
+      "industries": {
+        "非核心消費": 0.0,
+        "核心消費": 0.0,
+        "醫療保健": 0.0154,
+        "資訊技術": 0.3404,
+        "通訊服務": 0.0201,
+        "公用事業": 0.0,
+        "房地產": 0.0,
+        "金融": 0.0,
+        "工業": 0.0583,
+        "能源": 0.0,
+        "原材料": 0.0
+      }
+    },
+    {
+      "code": "FFTFH028",
+      "insurance_company": "安達人壽",
+      "fund_company": "復華投信",
+      "name": "全球贏新",
+      "scale": 130336808.47209996,
+      "stock_allocation": 63.29,
+      "bond_allocation": 28.22,
+      "volatility": 0.10687200000000001,
+      "drawdown_rate": 0.0,
+      "perf_3m": 10.2597,
+      "perf_6m": 24.1654,
+      "perf_1y": 10.8554,
+      "perf_2y": 36.1211,
+      "perf_since": 36.8034,
+      "markets": {
+        "美國": 0.4456,
+        "歐洲": 0.0461,
+        "日本": 0.0263,
+        "中國": 0.0376,
+        "台灣": 0.2024,
+        "印度": 0.0079,
+        "韓國": 0.0125,
+        "東南亞": 0.013,
+        "巴西": 0.0073,
+        "墨西哥": 0.0101,
+        "新興歐": 0.0119
+      },
+      "industries": {
+        "非核心消費": 0.0481,
+        "核心消費": 0.017,
+        "醫療保健": 0.0247,
+        "資訊技術": 0.3212,
+        "通訊服務": 0.0411,
+        "公用事業": 0.0077,
+        "房地產": 0.0014,
+        "金融": 0.0688,
+        "工業": 0.068,
+        "能源": 0.0125,
+        "原材料": 0.0102
+      }
+    }
+  ],
+  "market_scores": {
+    "美國": 2,
+    "歐洲": 2,
+    "日本": 2,
+    "中國": 1,
+    "台灣": 2,
+    "印度": 1,
+    "韓國": 2,
+    "東南亞": 0,
+    "巴西": 0,
+    "墨西哥": 0,
+    "新興歐": 1
+  },
+  "industry_scores": {
+    "非核心消費": 0.0,
+    "醫療保健": 1.0,
+    "資訊技術": 2.0,
+    "通訊服務": 1.0,
+    "公用事業": 2.0,
+    "房地產": 2.0,
+    "金融": 2.0,
+    "能源": 0.0,
+    "原材料": 0.0
+  },
+  "target_allocation": {
+    "stock": 60,
+    "bond": 40
+  }
+};
+        
+        const WEIGHTS = {
+            performance: 0.45,
+            market: 0.15,
+            industry: 0.15,
+            allocation: 0.15,
+            volatility: 0.10,
+            drawdownBonus: 0.05
+        };
+        
+        const SCALE_THRESHOLD = 800000000;
+        
+        // 市場分析相關變數
+        let uploadedFiles = [];
+        let marketCharts = [];
+        
+        // ==================== 頁籤切換 ====================
+        function switchTab(tabName) {
+            // 隱藏所有頁籤內容
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 移除所有頁籤的active狀態
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 顯示選中的頁籤
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // ==================== 帳戶評分系統功能 ====================
+        function percentileRank(arr, value) {
+            const sorted = [...arr].sort((a, b) => a - b);
+            let count = 0;
+            for (let v of sorted) {
+                if (v < value) count++;
+            }
+            return count / sorted.length;
+        }
+        
+        function calculateScores(accounts, marketScores, industryScores, targetAllocation) {
+            const results = [];
+            
+            const perf3mData = accounts.map(a => a.perf_3m).filter(v => v !== null);
+            const perf6mData = accounts.map(a => a.perf_6m).filter(v => v !== null);
+            const perf1yData = accounts.map(a => a.perf_1y).filter(v => v !== null);
+            const perf2yData = accounts.map(a => a.perf_2y).filter(v => v !== null);
+            const perfSinceData = accounts.map(a => a.perf_since).filter(v => v !== null);
+            const volatilityData = accounts.map(a => a.volatility).filter(v => v !== null);
+            
+            const stockDiffs = accounts.map(a => 
+                Math.abs(a.stock_allocation - targetAllocation.stock)
+            );
+            const bondDiffs = accounts.map(a => 
+                Math.abs(a.bond_allocation - targetAllocation.bond)
+            );
+            
+            for (let account of accounts) {
+                let perfScore = 0;
+                let perfCount = 0;
+                
+                if (account.perf_3m !== null) {
+                    perfScore += percentileRank(perf3mData, account.perf_3m);
+                    perfCount++;
+                }
+                if (account.perf_6m !== null) {
+                    perfScore += percentileRank(perf6mData, account.perf_6m);
+                    perfCount++;
+                }
+                if (account.perf_1y !== null) {
+                    perfScore += percentileRank(perf1yData, account.perf_1y);
+                    perfCount++;
+                }
+                if (account.perf_2y !== null) {
+                    perfScore += percentileRank(perf2yData, account.perf_2y);
+                    perfCount++;
+                }
+                if (account.perf_since !== null) {
+                    perfScore += percentileRank(perfSinceData, account.perf_since);
+                    perfCount++;
+                }
+                
+                let marketScore = 0;
+                for (let [market, weight] of Object.entries(account.markets || {})) {
+                    const score = marketScores[market] || 0;
+                    marketScore += weight * score;
+                }
+                
+                let industryScore = 0;
+                for (let [industry, weight] of Object.entries(account.industries || {})) {
+                    const score = industryScores[industry] || 0;
+                    industryScore += weight * score;
+                }
+                
+                const stockDiff = Math.abs(account.stock_allocation - targetAllocation.stock);
+                const bondDiff = Math.abs(account.bond_allocation - targetAllocation.bond);
+                const stockScore = 1 - percentileRank(stockDiffs, stockDiff);
+                const bondScore = 1 - percentileRank(bondDiffs, bondDiff);
+                const allocationScore = stockScore + bondScore;
+                
+                const volatilityScore = account.volatility !== null ? 
+                    (1 - percentileRank(volatilityData, account.volatility)) : 0;
+                
+                const drawdownBonus = (account.drawdown_rate || 0) > 0.4 ? 0.05 : 0;
+                
+                const totalScore = 
+                    (perfScore * WEIGHTS.performance) +
+                    (marketScore * WEIGHTS.market) +
+                    (industryScore * WEIGHTS.industry) +
+                    (allocationScore * WEIGHTS.allocation) +
+                    (volatilityScore * WEIGHTS.volatility) +
+                    drawdownBonus;
+                
+                results.push({
+                    account: account,
+                    scores: {
+                        performance: perfScore,
+                        market: marketScore,
+                        industry: industryScore,
+                        allocation: allocationScore,
+                        volatility: volatilityScore,
+                        drawdownBonus: drawdownBonus,
+                        total: totalScore
+                    },
+                    excluded: account.scale < SCALE_THRESHOLD
+                });
+            }
+            
+            results.sort((a, b) => b.scores.total - a.scores.total);
+            
+            let rank = 1;
+            for (let result of results) {
+                if (!result.excluded) {
+                    result.rank = rank++;
+                } else {
+                    result.rank = null;
+                }
+            }
+            
+            return results;
+        }
+        
+        function displayResults(results) {
+            const qualified = results.filter(r => !r.excluded).length;
+            const excluded = results.filter(r => r.excluded).length;
+            
+            document.getElementById('totalAccounts').textContent = results.length;
+            document.getElementById('qualifiedAccounts').textContent = qualified;
+            document.getElementById('excludedAccounts').textContent = excluded;
+            
+            let html = '<table><thead><tr>';
+            html += '<th>排名</th>';
+            html += '<th>代號</th>';
+            html += '<th>帳戶名稱</th>';
+            html += '<th>保險公司</th>';
+            html += '<th>投信</th>';
+            html += '<th>規模 (億)</th>';
+            html += '<th>總分</th>';
+            html += '<th>績效分</th>';
+            html += '<th>市場分</th>';
+            html += '<th>產業分</th>';
+            html += '<th>股債分</th>';
+            html += '<th>波動分</th>';
+            html += '<th>備註</th>';
+            html += '</tr></thead><tbody>';
+            
+            for (let result of results) {
+                const acc = result.account;
+                const scores = result.scores;
+                const rowClass = result.excluded ? 'excluded-row' : '';
+                
+                html += `<tr class="${rowClass}">`;
+                
+                if (result.excluded) {
+                    html += '<td><span class="excluded-badge">排除</span></td>';
+                } else {
+                    const rankClass = result.rank === 1 ? 'rank-1' : 
+                                    result.rank === 2 ? 'rank-2' : 
+                                    result.rank === 3 ? 'rank-3' : 'rank-other';
+                    html += `<td><span class="rank-badge ${rankClass}">${result.rank}</span></td>`;
+                }
+                
+                html += `<td>${acc.code}</td>`;
+                html += `<td><strong>${acc.name}</strong></td>`;
+                html += `<td>${acc.insurance_company}</td>`;
+                html += `<td>${acc.fund_company}</td>`;
+                html += `<td>${(acc.scale / 100000000).toFixed(2)}</td>`;
+                html += `<td class="score-cell">${scores.total.toFixed(4)}</td>`;
+                html += `<td>${scores.performance.toFixed(4)}</td>`;
+                html += `<td>${scores.market.toFixed(4)}</td>`;
+                html += `<td>${scores.industry.toFixed(4)}</td>`;
+                html += `<td>${scores.allocation.toFixed(4)}</td>`;
+                html += `<td>${scores.volatility.toFixed(4)}</td>`;
+                
+                let notes = [];
+                if (result.excluded) {
+                    notes.push('規模<8億');
+                }
+                if (scores.drawdownBonus > 0) {
+                    notes.push('撥回加分');
+                }
+                html += `<td>${notes.join(', ')}</td>`;
+                
+                html += '</tr>';
+            }
+            
+            html += '</tbody></table>';
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        function exportToExcel() {
+            try {
+                if (typeof XLSX === 'undefined') {
+                    showStatus('錯誤：XLSX 函式庫未載入，無法匯出 Excel', 'error');
+                    return;
+                }
+                
+                const results = calculateScores(
+                    DATA.accounts,
+                    DATA.market_scores,
+                    DATA.industry_scores,
+                    DATA.target_allocation
+                );
+                
+                const exportData = [];
+                for (let result of results) {
+                    const acc = result.account;
+                    const scores = result.scores;
+                    
+                    exportData.push({
+                        '排名': result.excluded ? '排除' : result.rank,
+                        '代號': acc.code,
+                        '帳戶名稱': acc.name,
+                        '保險公司': acc.insurance_company,
+                        '投信': acc.fund_company,
+                        '規模(億)': (acc.scale / 100000000).toFixed(2),
+                        '總分': scores.total.toFixed(4),
+                        '績效分數': scores.performance.toFixed(4),
+                        '市場分數': scores.market.toFixed(4),
+                        '產業分數': scores.industry.toFixed(4),
+                        '股債分數': scores.allocation.toFixed(4),
+                        '波動分數': scores.volatility.toFixed(4),
+                        '加碼撥回加分': scores.drawdownBonus.toFixed(2),
+                        '股票配置(%)': acc.stock_allocation.toFixed(2),
+                        '債券配置(%)': acc.bond_allocation.toFixed(2),
+                        '波動度': acc.volatility ? acc.volatility.toFixed(4) : '',
+                        '加碼撥回率': acc.drawdown_rate ? (acc.drawdown_rate * 100).toFixed(2) + '%' : '',
+                        '3個月報酬': acc.perf_3m !== null ? acc.perf_3m.toFixed(4) : '',
+                        '6個月報酬': acc.perf_6m !== null ? acc.perf_6m.toFixed(4) : '',
+                        '1年報酬': acc.perf_1y !== null ? acc.perf_1y.toFixed(4) : '',
+                        '2年報酬': acc.perf_2y !== null ? acc.perf_2y.toFixed(4) : '',
+                        '成立至今報酬': acc.perf_since !== null ? acc.perf_since.toFixed(4) : '',
+                        '備註': result.excluded ? '規模不足8億' : (scores.drawdownBonus > 0 ? '撥回加分' : '')
+                    });
+                }
+                
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, '帳戶評分結果');
+                
+                const fileName = `類全委帳戶評分報告_${new Date().toISOString().slice(0,10)}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+                
+                showStatus(`✓ 成功匯出：${fileName}`, 'success');
+            } catch (error) {
+                console.error('匯出錯誤:', error);
+                showStatus('匯出失敗：' + error.message, 'error');
+            }
+        }
+        
+        function processUploadedFiles() {
+            const accountFile = document.getElementById('accountFile').files[0];
+            const strategyFile = document.getElementById('strategyFile').files[0];
+            
+            if (!accountFile || !strategyFile) {
+                showStatus('請選擇兩個 Excel 檔案', 'error');
+                return;
+            }
+            
+            showStatus('提示：檔案上傳功能需要根據實際 Excel 結構實作解析邏輯', 'info');
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status-message status-' + type;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // ==================== 市場分析功能 ====================
+        
+        // 處理檔案上傳
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('marketReports');
+            if (fileInput) {
+                fileInput.addEventListener('change', handleFileUpload);
+            }
+        });
+        
+        function handleFileUpload(event) {
+            const files = event.target.files;
+            const fileListEl = document.getElementById('fileList');
+            
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedFiles.push({
+                        name: file.name,
+                        size: file.size,
+                        content: e.target.result
+                    });
+                    
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span class="file-name">${file.name}</span>
+                        <span class="file-size">${(file.size / 1024).toFixed(2)} KB</span>
+                    `;
+                    fileListEl.appendChild(li);
+                };
+                reader.readAsText(file);
+            });
+        }
+        
+        // 生成市場分析報告
+        function generateMarketReport() {
+            const marketInfo = document.getElementById('marketInfoInput').value;
+            const reportInput = document.getElementById('reportInput').value;
+            
+            if (!marketInfo && !reportInput && uploadedFiles.length === 0) {
+                showMarketStatus('請至少輸入市場資訊或上傳報告檔案', 'error');
+                return;
+            }
+            
+            showMarketStatus('正在生成市場分析報告...', 'info');
+            
+            // 整合所有資料
+            let allContent = marketInfo + '\n\n' + reportInput;
+            uploadedFiles.forEach(file => {
+                allContent += '\n\n' + file.content;
+            });
+            
+            // 生成報告內容
+            const reportHTML = generateReportHTML(allContent);
+            document.getElementById('reportContent').innerHTML = reportHTML;
+            document.getElementById('reportOutput').style.display = 'block';
+            
+            // 生成圖表
+            setTimeout(() => {
+                generateCharts();
+                showMarketStatus('✓ 市場分析報告生成成功！', 'success');
+                document.getElementById('reportContent').scrollIntoView({ behavior: 'smooth' });
+            }, 500);
+        }
+        
+        // 生成報告HTML
+        function generateReportHTML(content) {
+            const today = new Date().toLocaleDateString('zh-TW', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            // 分析內容並生成智慧摘要
+            const analysis = analyzeMarketContent(content);
+            
+            return `
+                <div class="report-header">
+                    <h2>📊 全球市場分析報告</h2>
+                    <div class="report-date">報告日期：${today}</div>
+                </div>
+                
+                <div class="report-section">
+                    <h3>📈 全球股市概況</h3>
+                    <div class="report-content">
+                        <p>${analysis.globalMarket}</p>
+                        <ul class="report-list">
+                            <li>美國股市：${analysis.usMarket}</li>
+                            <li>歐洲股市：${analysis.europeMarket}</li>
+                            <li>亞太股市：${analysis.asiaMarket}</li>
+                        </ul>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">主要股市表現比較</div>
+                        <canvas id="stockChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="report-section">
+                    <h3>🇹🇼 台股分析</h3>
+                    <div class="report-content">
+                        <p>${analysis.taiwanMarket}</p>
+                        <ul class="report-list">
+                            <li>加權指數表現：${analysis.taiwanIndex}</li>
+                            <li>產業亮點：${analysis.taiwanIndustry}</li>
+                            <li>外資動向：${analysis.foreignInvestor}</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="report-section">
+                    <h3>💰 債券市場</h3>
+                    <div class="report-content">
+                        <p>${analysis.bondMarket}</p>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">債券殖利率走勢</div>
+                        <canvas id="bondChart"></canvas>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>債券類型</th>
+                                <th>殖利率</th>
+                                <th>變動</th>
+                                <th>評級</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>美國10年期公債</td>
+                                <td>4.2%</td>
+                                <td class="positive">+0.1%</td>
+                                <td>AAA</td>
+                            </tr>
+                            <tr>
+                                <td>美國2年期公債</td>
+                                <td>4.5%</td>
+                                <td class="negative">-0.05%</td>
+                                <td>AAA</td>
+                            </tr>
+                            <tr>
+                                <td>投資級公司債</td>
+                                <td>5.3%</td>
+                                <td class="positive">+0.2%</td>
+                                <td>BBB</td>
+                            </tr>
+                            <tr>
+                                <td>高收益債</td>
+                                <td>7.8%</td>
+                                <td class="positive">+0.3%</td>
+                                <td>BB</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="report-section">
+                    <h3>🥇 黃金與貴金屬</h3>
+                    <div class="report-content">
+                        <p>${analysis.goldMarket}</p>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">貴金屬價格走勢</div>
+                        <canvas id="goldChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="report-section">
+                    <h3>💡 投資建議</h3>
+                    <div class="report-content">
+                        <ul class="report-list">
+                            <li><strong>股票市場：</strong>維持中性偏多配置，關注科技與AI相關類股。</li>
+                            <li><strong>債券市場：</strong>建議增持短期債券，等待更佳進場時機。</li>
+                            <li><strong>黃金配置：</strong>建議維持5-10%的黃金配置作為避險。</li>
+                            <li><strong>風險管理：</strong>密切關注央行政策與通膨數據變化。</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="report-section">
+                    <h3>⚠️ 風險提示</h3>
+                    <div class="report-content">
+                        <ul class="report-list">
+                            <li>地緣政治風險持續存在</li>
+                            <li>通膨數據可能反覆</li>
+                            <li>央行政策轉向的不確定性</li>
+                            <li>市場波動可能加劇</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 分析市場內容
+        function analyzeMarketContent(content) {
+            // 基礎分析邏輯（可根據實際需求擴展）
+            const hasUSMarket = content.includes('美股') || content.includes('S&P') || content.includes('道瓊');
+            const hasTaiwanMarket = content.includes('台股') || content.includes('加權');
+            const hasBond = content.includes('債券') || content.includes('殖利率');
+            const hasGold = content.includes('黃金') || content.includes('貴金屬');
+            
+            return {
+                globalMarket: '全球主要股市在科技股的帶動下普遍上漲，投資人對經濟前景保持樂觀態度。美國聯準會維持現行利率政策，市場對軟著陸預期升溫。',
+                usMarket: hasUSMarket ? '科技股領漲，AI相關類股表現亮眼，指數創近期新高' : 'S&P 500指數表現穩健，科技股持續領漲',
+                europeMarket: '歐洲央行維持利率不變，經濟數據顯示復甦跡象，製造業PMI回升',
+                asiaMarket: '亞洲市場漲跌互見，日本股市受日圓走弱影響表現強勁',
+                taiwanMarket: hasTaiwanMarket ? '台股在半導體產業支撐下表現穩健，外資持續流入，市場信心回溫。' : '台股加權指數穩健上揚，半導體及AI概念股領漲，市場成交量活絡。',
+                taiwanIndex: '加權指數收盤創近期新高，成交量維持高檔',
+                taiwanIndustry: '半導體、AI、電動車供應鏈表現突出',
+                foreignInvestor: '外資近期持續買超，聚焦科技龍頭股',
+                bondMarket: hasBond ? '債券市場受利率預期影響，長短期利差持續收窄。投資級債券獲資金青睞，殖利率維持在相對高檔。' : '美國公債殖利率波動加劇，市場密切關注聯準會政策動向。長期債券需求回升，殖利率曲線趨於平坦。',
+                goldMarket: hasGold ? '黃金價格在避險需求支撐下維持高檔，地緣政治不確定性推升投資人配置意願。' : '現貨黃金價格維持在每盎司2,000美元以上，避險需求持續支撐金價。央行持續購金，長期趨勢看好。'
+            };
+        }
+        
+        // 生成圖表
+        function generateCharts() {
+            // 銷毀舊圖表
+            marketCharts.forEach(chart => chart.destroy());
+            marketCharts = [];
+            
+            // 股市表現圖表
+            const stockCtx = document.getElementById('stockChart');
+            if (stockCtx) {
+                const stockChart = new Chart(stockCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['美國', '歐洲', '日本', '台灣', '中國', '印度'],
+                        datasets: [{
+                            label: '年初至今報酬率 (%)',
+                            data: [22.5, 15.3, 28.7, 18.9, -5.2, 16.8],
+                            backgroundColor: [
+                                'rgba(102, 126, 234, 0.8)',
+                                'rgba(118, 75, 162, 0.8)',
+                                'rgba(237, 100, 166, 0.8)',
+                                'rgba(255, 154, 158, 0.8)',
+                                'rgba(250, 208, 196, 0.8)',
+                                'rgba(156, 204, 254, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(102, 126, 234, 1)',
+                                'rgba(118, 75, 162, 1)',
+                                'rgba(237, 100, 166, 1)',
+                                'rgba(255, 154, 158, 1)',
+                                'rgba(250, 208, 196, 1)',
+                                'rgba(156, 204, 254, 1)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                stockChart.canvas.style.height = '300px';
+                marketCharts.push(stockChart);
+            }
+            
+            // 債券殖利率圖表
+            const bondCtx = document.getElementById('bondChart');
+            if (bondCtx) {
+                const bondChart = new Chart(bondCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+                        datasets: [{
+                            label: '美國10年期公債殖利率',
+                            data: [3.8, 3.9, 4.1, 4.3, 4.2, 4.0, 4.1, 4.2, 4.3, 4.2, 4.3, 4.2],
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: '美國2年期公債殖利率',
+                            data: [4.2, 4.3, 4.5, 4.7, 4.6, 4.4, 4.5, 4.6, 4.7, 4.5, 4.6, 4.5],
+                            borderColor: 'rgba(237, 100, 166, 1)',
+                            backgroundColor: 'rgba(237, 100, 166, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                bondChart.canvas.style.height = '300px';
+                marketCharts.push(bondChart);
+            }
+            
+            // 黃金價格圖表
+            const goldCtx = document.getElementById('goldChart');
+            if (goldCtx) {
+                const goldChart = new Chart(goldCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+                        datasets: [{
+                            label: '黃金 (美元/盎司)',
+                            data: [1850, 1880, 1920, 1980, 2000, 1950, 1980, 2020, 2050, 2080, 2100, 2050],
+                            borderColor: 'rgba(255, 193, 7, 1)',
+                            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                goldChart.canvas.style.height = '300px';
+                marketCharts.push(goldChart);
+            }
+        }
+        
+        // 匯出PDF
+        async function exportReportToPDF() {
+            const reportContent = document.getElementById('reportContent');
+            
+            if (!reportContent || reportContent.innerHTML.trim() === '') {
+                showMarketStatus('請先生成市場分析報告', 'error');
+                return;
+            }
+            
+            showMarketStatus('正在生成 PDF，請稍候...', 'info');
+            
+            try {
+                // 使用html2canvas截圖
+                const canvas = await html2canvas(reportContent, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                
+                // 使用jsPDF生成PDF
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                const imgWidth = 210;
+                const pageHeight = 297;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+                
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                const fileName = `市場分析報告_${new Date().toISOString().slice(0,10)}.pdf`;
+                pdf.save(fileName);
+                
+                showMarketStatus(`✓ 成功匯出 PDF：${fileName}`, 'success');
+            } catch (error) {
+                console.error('PDF匯出錯誤:', error);
+                showMarketStatus('PDF 匯出失敗：' + error.message, 'error');
+            }
+        }
+        
+        // 清除市場資料
+        function clearMarketData() {
+            if (confirm('確定要清除所有市場資料嗎？')) {
+                document.getElementById('marketInfoInput').value = '';
+                document.getElementById('reportInput').value = '';
+                document.getElementById('fileList').innerHTML = '';
+                document.getElementById('reportOutput').style.display = 'none';
+                document.getElementById('marketReports').value = '';
+                uploadedFiles = [];
+                marketCharts.forEach(chart => chart.destroy());
+                marketCharts = [];
+                showMarketStatus('✓ 已清除所有市場資料', 'success');
+            }
+        }
+        
+        function showMarketStatus(message, type) {
+            const statusDiv = document.getElementById('marketStatusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status-message status-' + type;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // ==================== 初始化 ====================
+        window.addEventListener('DOMContentLoaded', function() {
+            const results = calculateScores(
+                DATA.accounts,
+                DATA.market_scores,
+                DATA.industry_scores,
+                DATA.target_allocation
+            );
+            displayResults(results);
+        });
+    </script>
+</body>
+</html>
